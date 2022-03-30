@@ -44,8 +44,8 @@ fn get_param_val(form_data: &FormData, name: &str) -> Option<String> {
     None
 }
 
-pub async fn get_token(params: FormData, ctx: &RouteContext<()>) -> Result<Response> {
-    let grant_type: String = get_param_val(&params, "grant_type").unwrap_or_default();
+pub async fn get_token(form_data: FormData, ctx: &RouteContext<()>) -> Result<Response> {
+    let grant_type: String = get_param_val(&form_data, "grant_type").unwrap_or_default();
     let mut post_data: HashMap<&str, String> = HashMap::from([
         ("client_id", ctx.secret("TWITCH_ID").unwrap().to_string()),
         (
@@ -59,11 +59,11 @@ pub async fn get_token(params: FormData, ctx: &RouteContext<()>) -> Result<Respo
         "refresh_token" => {
             post_data.insert(
                 "refresh_token",
-                get_param_val(&params, "refresh_token").unwrap(),
+                get_param_val(&form_data, "refresh_token").unwrap(),
             );
         }
         "authorization_code" => {
-            post_data.insert("code", get_param_val(&params, "code").unwrap());
+            post_data.insert("code", get_param_val(&form_data, "code").unwrap());
             post_data.insert(
                 "redirect_uri",
                 ctx.secret("TWITCH_REDIRECT_URL").unwrap().to_string(),
