@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use reqwest;
 use serde::Serialize;
 use serde_json;
 use serde_qs;
-use worker::{FormData, FormEntry, Response, Result, RouteContext};
+use worker::wasm_bindgen::JsValue;
+use worker::{FormData, FormEntry, Method, Response, Result, RouteContext};
 
 use crate::platforms::utils::generate_state_string;
 
@@ -48,23 +48,41 @@ pub async fn get_token(params: FormData, ctx: &RouteContext<()>) -> Result<Respo
     let grant_type: String = get_param_val(&params, "grant_type").unwrap_or_default();
     let mut post_data: HashMap<&str, String> = HashMap::from([
         ("client_id", ctx.secret("TWITCH_ID").unwrap().to_string()),
-        ("client_secret", ctx.secret("TWITCH_SECRET").unwrap().to_string()),
-        ("grant_type", grant_type.to_string())
+        (
+            "client_secret",
+            ctx.secret("TWITCH_SECRET").unwrap().to_string(),
+        ),
+        ("grant_type", grant_type.to_string()),
     ]);
 
     match grant_type.as_str() {
         "refresh_token" => {
-            post_data.insert("refresh_token", get_param_val(&params, "refresh_token").unwrap());
+            post_data.insert(
+                "refresh_token",
+                get_param_val(&params, "refresh_token").unwrap(),
+            );
         }
         "authorization_code" => {
             post_data.insert("code", get_param_val(&params, "code").unwrap());
-            post_data.insert("redirect_uri", ctx.secret("TWITCH_REDIRECT_URL").unwrap().to_string());
+            post_data.insert(
+                "redirect_uri",
+                ctx.secret("TWITCH_REDIRECT_URL").unwrap().to_string(),
+            );
         }
         _ => return Response::error(format!("Invalid grant_type '{}'", grant_type), 400),
     }
 
-    let client = reqwest::Client::new();
-    let _resp = client.post(TWITCH_TOKEN_URL).form(&post_data).send().await;
+    let mut headers = worker::Headers::new();
+    headers.set("Content-Type", "application/x-www-form-urlencoded")?;
+
+    let mut req_init = worker::RequestInit::new();
+    req_init.with_method(Method::Post);
+    req_init.with_body(Some(JsValue::from_str(
+        serde_qs::to_string(&post_data).unwrap().as_str(),
+    )));
+
+    let req = worker::Request::new_with_init(TWITCH_TOKEN_URL, &req_init)?;
+    let _resp = worker::Fetch::Request(req).send().await;
 
     if _resp.is_err() {
         let resp = Response::from_json(&serde_json::json!({
@@ -73,10 +91,11 @@ pub async fn get_token(params: FormData, ctx: &RouteContext<()>) -> Result<Respo
         }))?;
         return Ok(resp.with_status(500));
     }
-    let resp = _resp.unwrap();
 
-    let status = resp.status().as_u16();
+    let mut resp = _resp.unwrap();
+    let status = resp.status_code();
     let _json = resp.json::<HashMap<String, serde_json::Value>>().await;
+
     if _json.is_err() {
         let res = Response::from_json(&serde_json::json!({
             "error": "parse_error",
@@ -84,8 +103,8 @@ pub async fn get_token(params: FormData, ctx: &RouteContext<()>) -> Result<Respo
         }))?;
         return Ok(res.with_status(500));
     }
-    let data = _json.unwrap();
 
+    let data = _json.unwrap();
 
     if status != 200 {
         let resp_data: serde_json::Value;
