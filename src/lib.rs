@@ -14,7 +14,8 @@ fn handle_redirects(_: Request, ctx: RouteContext<()>) -> Result<Response> {
 
     match provider.unwrap().as_str() {
         "twitch" => url = platforms::twitch::get_redirect_url(&ctx),
-        _ => return Response::error(format!("Unknown provider: {}", provider.unwrap()), 404)
+        "restream" => url = platforms::restream::get_redirect_url(&ctx),
+        _ => return Response::error(format!("Unknown provider: {}", provider.unwrap()), 404),
     }
 
     Response::redirect(Url::parse(&url)?)
@@ -26,6 +27,7 @@ async fn handle_token(mut req: Request, ctx: RouteContext<()>) -> Result<Respons
 
     match provider.unwrap().as_str() {
         "twitch" => platforms::twitch::get_token(form_data, &ctx).await,
+        "restream" => platforms::restream::get_token(form_data, &ctx).await,
         _ => Response::error(format!("Unknown provider: {}", provider.unwrap()), 404),
     }
 }
