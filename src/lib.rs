@@ -1,7 +1,7 @@
 use worker::*;
 
-mod utils;
 mod platforms;
+mod utils;
 
 fn log_request(req: &Request) {
     console_log!(
@@ -16,7 +16,7 @@ fn log_request(req: &Request) {
 const BLANK_PAGE: &str = "This is an open field west of a white house, with a boarded front door.
 There is a small mailbox here.
 >";
-const OAUTH_FINISHED : &str = "OAuth finished. This window should close momentarily.";
+const OAUTH_FINISHED: &str = "OAuth finished. This window should close momentarily.";
 
 fn handle_redirects(_: Request, ctx: RouteContext<()>) -> Result<Response> {
     let provider = ctx.param("platform");
@@ -40,7 +40,7 @@ async fn handle_token(mut req: Request, ctx: RouteContext<()>) -> Result<Respons
 
     match provider.unwrap().as_str() {
         "twitch" => platforms::twitch::get_token(params, &ctx).await,
-        _ => Response::error(format!("Unknown provider: {}", provider.unwrap()), 404)
+        _ => Response::error(format!("Unknown provider: {}", provider.unwrap()), 404),
     }
 }
 
@@ -52,7 +52,9 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
     router
         .get("/", |_, _| Response::ok(BLANK_PAGE))
         .get("/v1/:platform/redirect", handle_redirects)
-        .get("/v1/:platform/finished", |_, _| Response::ok(OAUTH_FINISHED))
+        .get("/v1/:platform/finished", |_, _| {
+            Response::ok(OAUTH_FINISHED)
+        })
         .post_async("/v1/:platform/token", |req, ctx| async move {
             let res = handle_token(req, ctx).await;
             if let Err(_res) = res {
