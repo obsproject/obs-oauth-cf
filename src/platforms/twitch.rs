@@ -4,9 +4,9 @@ use serde::Serialize;
 use serde_json;
 use serde_qs;
 use worker::wasm_bindgen::JsValue;
-use worker::{FormData, FormEntry, Method, Response, Result, RouteContext};
+use worker::{FormData, Method, Response, Result, RouteContext};
 
-use crate::platforms::utils::generate_state_string;
+use crate::platforms::utils::{generate_state_string, get_param_val};
 
 const SCOPES: &str = "channel:read:stream_key";
 const TWITCH_AUTH_URL: &str = "https://id.twitch.tv/oauth2/authorize";
@@ -31,17 +31,6 @@ pub fn get_redirect_url(ctx: &RouteContext<()>) -> String {
     };
 
     format!("{}?{}", TWITCH_AUTH_URL, serde_qs::to_string(&q).unwrap())
-}
-
-fn get_param_val(form_data: &FormData, name: &str) -> Option<String> {
-    // This is fucking atrocious.
-    if let Some(value) = form_data.get(name) {
-        if let FormEntry::Field(val) = value {
-            return Some(val);
-        }
-    };
-
-    None
 }
 
 pub async fn get_token(form_data: FormData, ctx: &RouteContext<()>) -> Result<Response> {
