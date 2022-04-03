@@ -75,10 +75,10 @@ pub async fn get_token(config: OAuthConfig, form_data: FormData) -> Result<Respo
     let req = worker::Request::new_with_init(&config.token_url, &req_init)?;
     let _resp = worker::Fetch::Request(req).send().await;
 
-    if _resp.is_err() {
+    if let Err(e) = _resp {
         let resp = Response::from_json(&serde_json::json!({
-            "error": "curl_error",
-            "error_description": format!("Request failed with {}", _resp.err().unwrap())
+            "error": "curl_error",  // Legacy error code used in original PHP script
+            "error_description": format!("Request failed with {}", e)
         }))?;
         return Ok(resp.with_status(500));
     }
