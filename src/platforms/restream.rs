@@ -1,131 +1,43 @@
-use std::collections::HashMap;
+use worker::{FormData, Response, Result, RouteContext};
 
-use serde::Serialize;
-use serde_json;
-use serde_qs;
-use worker::wasm_bindgen::JsValue;
-use worker::{FormData, Method, Response, Result, RouteContext};
-
-use crate::platforms::utils::{generate_state_string, get_param_val};
+use crate::platforms::oauth;
+use crate::platforms::oauth::OAuthConfig;
 
 const SCOPES: &str = "stream.default.read+chat.default.read";
 const RESTREAM_AUTH_URL: &str = "https://api.restream.io/login";
 const RESTREAM_TOKEN_URL: &str = "https://api.restream.io/oauth/token";
 
-#[derive(Serialize)]
-struct RedirectParams {
-    client_id: String,
-    redirect_uri: String,
-    response_type: String,
-    scope: String,
-    include_granted_scopes: bool,
-    state: String,
+pub fn get_redirect_url(ctx: &RouteContext<()>, legacy: bool) -> String {
+    oauth::get_redirect_url(get_config(ctx, legacy))
 }
 
-pub fn get_redirect_url(ctx: &RouteContext<()>) -> String {
-    let q = RedirectParams {
+pub async fn get_token(
+    ctx: &RouteContext<()>,
+    form_data: FormData,
+    legacy: bool,
+) -> Result<Response> {
+    oauth::get_token(get_config(ctx, legacy), form_data).await
+}
+
+fn get_config(ctx: &RouteContext<()>, legacy: bool) -> OAuthConfig {
+    let mut config = oauth::OAuthConfig {
+        name: "Restream".to_string(),
         client_id: ctx.secret("RESTREAM_ID").unwrap().to_string(),
-        redirect_uri: ctx.secret("RESTREAM_REDIRECT_URL").unwrap().to_string(),
-        response_type: "code".to_string(),
+        client_secret: ctx.secret("RESTREAM_SECRET").unwrap().to_string(),
+        redirect_url: ctx.var("RESTREAM_REDIRECT_URL").unwrap().to_string(),
         scope: SCOPES.to_string(),
-        include_granted_scopes: true,
-        state: generate_state_string(),
+        auth_url: RESTREAM_AUTH_URL.to_string(),
+        token_url: RESTREAM_TOKEN_URL.to_string(),
+        ..Default::default()
     };
 
-    format!("{}?{}", RESTREAM_AUTH_URL, serde_qs::to_string(&q).unwrap())
-}
-
-pub async fn get_token(form_data: FormData, ctx: &RouteContext<()>) -> Result<Response> {
-    let grant_type: String = get_param_val(&form_data, "grant_type").unwrap_or_default();
-    let mut post_data: HashMap<&str, String> = HashMap::from([
-        ("client_id", ctx.secret("RESTREAM_ID").unwrap().to_string()),
-        (
-            "client_secret",
-            ctx.secret("RESTREAM_SECRET").unwrap().to_string(),
-        ),
-        ("grant_type", grant_type.to_string()),
-    ]);
-
-    match grant_type.as_str() {
-        "refresh_token" => {
-            post_data.insert(
-                "refresh_token",
-                get_param_val(&form_data, "refresh_token").unwrap(),
-            );
-        }
-        "authorization_code" => {
-            post_data.insert("code", get_param_val(&form_data, "code").unwrap());
-            post_data.insert(
-                "redirect_uri",
-                ctx.secret("RESTREAM_REDIRECT_URL").unwrap().to_string(),
-            );
-        }
-        _ => return Response::error(format!("Invalid grant_type '{}'", grant_type), 400),
+    if legacy {
+        config.redirect_url = ctx.var("RESTREAM_LEGACY_REDIRECT_URL").unwrap().to_string();
     }
 
-    let mut headers = worker::Headers::new();
-    headers.set("Content-Type", "application/x-www-form-urlencoded")?;
+    config
+        .extra_params
+        .insert("include_granted_scopes".to_string(), "true".to_string());
 
-    let mut req_init = worker::RequestInit::new();
-    req_init.with_method(Method::Post);
-    req_init.with_body(Some(JsValue::from_str(
-        serde_qs::to_string(&post_data).unwrap().as_str(),
-    )));
-
-    let req = worker::Request::new_with_init(RESTREAM_TOKEN_URL, &req_init)?;
-    let _resp = worker::Fetch::Request(req).send().await;
-
-    if _resp.is_err() {
-        let resp = Response::from_json(&serde_json::json!({
-            "error": "curl_error",
-            "error_description": format!("Request failed with {}", _resp.err().unwrap())
-        }))?;
-        return Ok(resp.with_status(500));
-    }
-
-    let mut resp = _resp.unwrap();
-    let status = resp.status_code();
-    let _json = resp.json::<HashMap<String, serde_json::Value>>().await;
-
-    if _json.is_err() {
-        let res = Response::from_json(&serde_json::json!({
-            "error": "parse_error",
-            "error_description": "Bad JSON response from Restream"
-        }))?;
-        return Ok(res.with_status(500));
-    }
-
-    let data = _json.unwrap();
-
-    if status != 200 {
-        let resp_data: serde_json::Value;
-
-        if data.contains_key("message") {
-            if data["message"].as_str().unwrap() == "Invalid refresh token" {
-                resp_data = serde_json::json!({
-                    "error": "Error",
-                    "error_description": "Your Restream login token is no longer valid. Please try reconnecting your account."
-                });
-            } else {
-                resp_data = serde_json::json!({
-                    "error": "Error",
-                    "error_description": data["message"].as_str().unwrap()
-                })
-            };
-        } else {
-            resp_data = serde_json::json!({
-                "error": "status_error",
-                "error_description": format!("Received HTTP {} from Restream", status)
-            });
-        }
-        let res = Response::from_json(&resp_data)?;
-        return Ok(res.with_status(status));
-    }
-
-    let res = Response::from_json(&data)?;
-    if data.contains_key("error") {
-        return Ok(res.with_status(500));
-    }
-
-    Ok(res)
+    config
 }

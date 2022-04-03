@@ -1,36 +1,14 @@
 use worker::*;
-
 mod platforms;
 mod utils;
+
+use platforms::restream;
+use platforms::twitch;
 
 const BLANK_PAGE: &str = "This is an open field west of a white house, with a boarded front door.
 There is a small mailbox here.
 >";
 const OAUTH_FINISHED: &str = "OAuth finished. This window should close momentarily.";
-
-fn handle_redirects(_: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let provider = ctx.param("platform");
-    let url: String;
-
-    match provider.unwrap().as_str() {
-        "twitch" => url = platforms::twitch::get_redirect_url(&ctx),
-        "restream" => url = platforms::restream::get_redirect_url(&ctx),
-        _ => return Response::error(format!("Unknown provider: {}", provider.unwrap()), 404),
-    }
-
-    Response::redirect(Url::parse(&url)?)
-}
-
-async fn handle_token(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let provider = ctx.param("platform");
-    let form_data = req.form_data().await?;
-
-    match provider.unwrap().as_str() {
-        "twitch" => platforms::twitch::get_token(form_data, &ctx).await,
-        "restream" => platforms::restream::get_token(form_data, &ctx).await,
-        _ => Response::error(format!("Unknown provider: {}", provider.unwrap()), 404),
-    }
-}
 
 #[event(fetch)]
 pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Response> {
@@ -52,4 +30,28 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
         })
         .run(req, env)
         .await
+}
+
+fn handle_redirects(_: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let platform = ctx.param("platform");
+    let url: String;
+
+    match platform.unwrap().as_str() {
+        "twitch" => url = twitch::get_redirect_url(&ctx, false),
+        "restream" => url = restream::get_redirect_url(&ctx, false),
+        _ => return Response::error(format!("Unknown platform: {}", platform.unwrap()), 404),
+    }
+
+    Response::redirect(Url::parse(&url)?)
+}
+
+async fn handle_token(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
+    let platform = ctx.param("platform");
+    let form_data = req.form_data().await?;
+
+    match platform.unwrap().as_str() {
+        "twitch" => twitch::get_token(&ctx, form_data, false).await,
+        "restream" => restream::get_token(&ctx, form_data, false).await,
+        _ => Response::error(format!("Unknown platform: {}", platform.unwrap()), 404),
+    }
 }
