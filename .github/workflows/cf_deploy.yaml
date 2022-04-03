@@ -16,16 +16,12 @@ jobs:
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           secrets: |
-            TWITCH_REDIRECT_URL
             TWITCH_ID
             TWITCH_SECRET
-            RESTREAM_REDIRECT_URL
             RESTREAM_ID
             RESTREAM_SECRET
         env:
-          TWITCH_REDIRECT_URL: ${{ secrets.TWITCH_REDIRECT_URL }}
           TWITCH_ID: ${{ secrets.TWITCH_ID }}
           TWITCH_SECRET: ${{ secrets.TWITCH_SECRET }}
-          RESTREAM_REDIRECT_URL: ${{ secrets.TWITCH_SECRET }}
-          RESTREAM_ID: ${{ secrets.TWITCH_SECRET }}
-          RESTREAM_SECRET: ${{ secrets.TWITCH_SECRET }}
+          RESTREAM_ID: ${{ secrets.RESTREAM_ID }}
+          RESTREAM_SECRET: ${{ secrets.RESTREAM_SECRET }}
