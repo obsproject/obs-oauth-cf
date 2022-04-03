@@ -17,7 +17,7 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
     router
         .get("/", |_, _| Response::ok(BLANK_PAGE))
         .get("/v1/:platform/redirect", handle_redirects)
-        .get("/v1/:platform/finished", |_, _| {
+        .get("/v1/:platform/finalise", |_, _| {
             Response::ok(OAUTH_FINISHED)
         })
         .post_async("/v1/:platform/token", |req, ctx| async move {
