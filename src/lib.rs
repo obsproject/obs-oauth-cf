@@ -35,15 +35,12 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
 
 fn handle_redirects(_: Request, ctx: RouteContext<()>) -> Result<Response> {
     let platform = ctx.param("platform").unwrap();
-    let url: String;
 
     match platform.as_str() {
-        "twitch" => url = twitch::get_redirect_url(&ctx, false),
-        "restream" => url = restream::get_redirect_url(&ctx, false),
-        _ => return Response::error(format!("Unknown platform: {}", platform), 404),
+        "twitch" => twitch::get_redirect(&ctx, false),
+        "restream" => restream::get_redirect(&ctx, false),
+        _ => Response::error(format!("Unknown platform: {}", platform), 404),
     }
-
-    Response::redirect(Url::parse(&url)?)
 }
 
 async fn handle_token(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
@@ -69,15 +66,11 @@ fn handle_legacy_redirects(req: Request, ctx: RouteContext<()>) -> Result<Respon
     });
 
     if do_redirect {
-        let url: String;
-
         match platform.as_str() {
-            "twitch" => url = twitch::get_redirect_url(&ctx, true),
-            "restream" => url = restream::get_redirect_url(&ctx, true),
-            _ => return Response::error(format!("Unknown platform: {}", platform), 404),
+            "twitch" => twitch::get_redirect(&ctx, true),
+            "restream" => restream::get_redirect(&ctx, true),
+            _ => Response::error(format!("Unknown platform: {}", platform), 404),
         }
-
-        Response::redirect(Url::parse(&url)?)
     } else {
         Response::ok(OAUTH_COMPLETE)
     }

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
 use worker::wasm_bindgen::JsValue;
-use worker::{FormData, FormEntry, Method, Response, Result};
+use worker::{FormData, FormEntry, Method, Response, Result, Url};
 
 #[derive(Default)]
 pub struct OAuthConfig {
@@ -17,7 +17,7 @@ pub struct OAuthConfig {
     pub extra_params: HashMap<String, String>,
 }
 
-pub fn get_redirect_url(config: OAuthConfig) -> String {
+fn get_redirect_url(config: OAuthConfig) -> String {
     let mut params = vec![
         ("client_id", config.client_id),
         ("redirect_uri", config.redirect_url),
@@ -37,6 +37,13 @@ pub fn get_redirect_url(config: OAuthConfig) -> String {
         config.auth_url,
         serde_urlencoded::to_string(params).unwrap()
     )
+}
+
+pub fn get_redirect(config: OAuthConfig) -> Result<Response> {
+    let redirect_url = get_redirect_url(config);
+    let parsed_url = Url::parse(&redirect_url)?;
+
+    Response::redirect(parsed_url)
 }
 
 pub async fn get_token(config: OAuthConfig, form_data: FormData) -> Result<Response> {
