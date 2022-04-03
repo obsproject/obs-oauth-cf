@@ -8,6 +8,9 @@ use platforms::twitch;
 const BLANK_PAGE: &str = "This is an open field west of a white house, with a boarded front door.
 There is a small mailbox here.
 >";
+const FOUR_OH_FOUR: &str = "This is an open field.
+There is nothing here.
+>";
 const OAUTH_FINISHED: &str = "OAuth finished. This window should close momentarily.";
 
 #[event(fetch)]
@@ -24,6 +27,7 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
         // Legacy routes
         .get("/app-auth/:platform", handle_legacy_redirects)
         .post_async("/app-auth/:platform_action", handle_legacy_token)
+        .or_else_any_method("/*catchall", |_, _| Response::error(FOUR_OH_FOUR, 404))
         .run(req, env)
         .await
 }
