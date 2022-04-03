@@ -20,14 +20,7 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
         .get("/v1/:platform/finalise", |_, _| {
             Response::ok(OAUTH_FINISHED)
         })
-        .post_async("/v1/:platform/token", |req, ctx| async move {
-            let res = handle_token(req, ctx).await;
-            if let Err(res_err) = res {
-                Response::error(format!("Bad Request: {}", res_err.to_string()), 400)
-            } else {
-                res
-            }
-        })
+        .post_async("/v1/:platform/token", handle_token)
         // Legacy routes
         .get("/app-auth/:platform", handle_legacy_redirects)
         .post_async("/app-auth/:platform_action", handle_legacy_token)
