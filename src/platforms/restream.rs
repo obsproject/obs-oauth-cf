@@ -3,7 +3,7 @@ use worker::{FormData, Response, Result, RouteContext};
 use crate::platforms::oauth;
 use crate::platforms::oauth::OAuthConfig;
 
-const SCOPES: &str = "stream.default.read+chat.default.read";
+const SCOPES: &str = "stream.default.read chat.default.read";
 const RESTREAM_AUTH_URL: &str = "https://api.restream.io/login";
 const RESTREAM_TOKEN_URL: &str = "https://api.restream.io/oauth/token";
 
