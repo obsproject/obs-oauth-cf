@@ -3,6 +3,12 @@ type = "javascript"
 workers_dev = true
 compatibility_date = "2022-03-29"
 
+[vars]
+TWITCH_REDIRECT_URL = "https://auth.obsproject.com/v1/twitch/finalise"
+TWITCH_LEGACY_REDIRECT_URL = "https://obsproject.com/app-auth/twitch"
+RESTREAM_REDIRECT_URL = "https://auth.obsproject.com/v1/restream/finalise"
+RESTREAM_LEGACY_REDIRECT_URL = "https://obsproject.com/app-auth/restream-auth.php"
+
 [build]
 command = "cargo install -q worker-build && worker-build --release" # required
 
