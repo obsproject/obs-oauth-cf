@@ -18,46 +18,46 @@ pub struct OAuthConfig {
 }
 
 pub fn get_redirect_url(config: OAuthConfig) -> String {
-    let mut params: HashMap<&str, String> = HashMap::from([
-        ("client_id", config.client_id.clone()),
-        ("redirect_uri", config.redirect_url.clone()),
+    let mut params = vec![
+        ("client_id", config.client_id),
+        ("redirect_uri", config.redirect_url),
         ("response_type", "code".to_string()),
-        ("scope", config.scope.clone()),
+        ("scope", config.scope),
         ("state", generate_state_string()),
-    ]);
+    ];
 
     if config.extra_params.len() > 0 {
         for (key, val) in config.extra_params.iter() {
-            params.insert(key, val.to_string());
+            params.push((key, val.to_string()));
         }
     }
 
     format!(
         "{}?{}",
         config.auth_url,
-        serde_qs::to_string(&params).unwrap()
+        serde_urlencoded::to_string(params).unwrap()
     )
 }
 
 pub async fn get_token(config: OAuthConfig, form_data: FormData) -> Result<Response> {
     let grant_type: String = get_param_val(&form_data, "grant_type").unwrap_or_default();
 
-    let mut post_data: HashMap<&str, String> = HashMap::from([
-        ("client_id", config.client_id.clone()),
-        ("client_secret", config.client_secret.clone()),
+    let mut post_data = vec![
+        ("client_id", config.client_id),
+        ("client_secret", config.client_secret),
         ("grant_type", grant_type.to_string()),
-    ]);
+    ];
 
     match grant_type.as_str() {
         "refresh_token" => {
-            post_data.insert(
+            post_data.push((
                 "refresh_token",
                 get_param_val(&form_data, "refresh_token").unwrap(),
-            );
+            ));
         }
         "authorization_code" => {
-            post_data.insert("code", get_param_val(&form_data, "code").unwrap());
-            post_data.insert("redirect_uri", config.redirect_url.clone());
+            post_data.push(("code", get_param_val(&form_data, "code").unwrap()));
+            post_data.push(("redirect_uri", config.redirect_url));
         }
         _ => return Response::error(format!("Invalid grant_type '{}'", grant_type), 400),
     }
@@ -69,7 +69,7 @@ pub async fn get_token(config: OAuthConfig, form_data: FormData) -> Result<Respo
     req_init.with_method(Method::Post);
     req_init.with_headers(headers);
     req_init.with_body(Some(JsValue::from_str(
-        serde_qs::to_string(&post_data).unwrap().as_str(),
+        serde_urlencoded::to_string(post_data).unwrap().as_str(),
     )));
 
     let req = worker::Request::new_with_init(&config.token_url, &req_init)?;
