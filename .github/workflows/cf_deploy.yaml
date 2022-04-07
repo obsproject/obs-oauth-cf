@@ -20,6 +20,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Restore Rust Cache
+        uses: Swatinem/rust-cache@v1
+
       - name: Install wrangler
         run: cargo install wrangler
 
