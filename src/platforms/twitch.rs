@@ -14,11 +14,7 @@ pub fn get_redirect(ctx: &RouteContext<()>, legacy: bool) -> Result<Response> {
     }
 }
 
-pub async fn get_token(
-    ctx: &RouteContext<()>,
-    form_data: FormData,
-    legacy: bool,
-) -> Result<Response> {
+pub async fn get_token(ctx: &RouteContext<()>, form_data: FormData, legacy: bool) -> Result<Response> {
     match get_twitch_config(ctx, legacy) {
         Ok(config) => oauth::get_token(config, form_data).await,
         Err(err) => Response::error(format!("Something went wrong: {}", err), 500),

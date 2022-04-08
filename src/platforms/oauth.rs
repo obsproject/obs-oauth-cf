@@ -32,11 +32,7 @@ fn get_redirect_url(config: OAuthConfig) -> String {
         }
     }
 
-    format!(
-        "{}?{}",
-        config.auth_url,
-        serde_urlencoded::to_string(params).unwrap()
-    )
+    format!("{}?{}", config.auth_url, serde_urlencoded::to_string(params).unwrap())
 }
 
 pub fn get_redirect(config: OAuthConfig) -> Result<Response> {
@@ -57,10 +53,7 @@ pub async fn get_token(config: OAuthConfig, form_data: FormData) -> Result<Respo
 
     match grant_type.as_str() {
         "refresh_token" => {
-            post_data.push((
-                "refresh_token",
-                get_param_val(&form_data, "refresh_token").unwrap(),
-            ));
+            post_data.push(("refresh_token", get_param_val(&form_data, "refresh_token").unwrap()));
         }
         "authorization_code" => {
             post_data.push(("code", get_param_val(&form_data, "code").unwrap()));

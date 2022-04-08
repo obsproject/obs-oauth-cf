@@ -21,9 +21,7 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
     router
         .get("/", |_, _| Response::ok(BLANK_PAGE))
         .get("/v1/:platform/redirect", handle_redirects)
-        .get("/v1/:platform/finalise", |_, _| {
-            Response::ok(OAUTH_COMPLETE)
-        })
+        .get("/v1/:platform/finalise", |_, _| Response::ok(OAUTH_COMPLETE))
         .post_async("/v1/:platform/token", handle_token)
         // Legacy routes
         .get("/app-auth/:platform", handle_legacy_redirects)
