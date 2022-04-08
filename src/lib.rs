@@ -43,27 +43,24 @@ fn handle_redirects(_: Request, ctx: RouteContext<()>) -> Result<Response> {
 
 async fn handle_token(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
     let platform = ctx.param("platform").unwrap();
-    let form_data = req.form_data().await?;
+
+    let form_data = req.form_data().await;
+    if let Err(err) = form_data {
+        return Response::error(format!("Bad Request: {}", err), 400);
+    }
 
     match platform.as_str() {
-        "twitch" => twitch::get_token(&ctx, form_data, false).await,
-        "restream" => restream::get_token(&ctx, form_data, false).await,
+        "twitch" => twitch::get_token(&ctx, form_data?, false).await,
+        "restream" => restream::get_token(&ctx, form_data?, false).await,
         _ => Response::error(format!("Unknown platform: {}", platform), 404),
     }
 }
 
 fn handle_legacy_redirects(req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    // Deal with "/app-auth/<platform>?action=redirect"
+    // Deal with "/app-auth/<platform>[?action=redirect]"
     let platform = ctx.param("platform").unwrap();
     // Redirect if URL param "action" is set to "redirect", otherwise show OAuth complete page
-    let mut do_redirect = false;
-    req.url()?.query_pairs().for_each(|(k, v)| {
-        if k == "action" && v == "redirect" {
-            do_redirect = true;
-        }
-    });
-
-    if do_redirect {
+    if req.url()?.query_pairs().any(|(k, v)| k == "action" && v == "redirect") {
         match platform.as_str() {
             "twitch" => twitch::get_redirect(&ctx, true),
             "restream" => restream::get_redirect(&ctx, true),
@@ -81,11 +78,15 @@ async fn handle_legacy_token(mut req: Request, ctx: RouteContext<()>) -> Result<
         return Response::error("Bad Request", 400);
     }
 
-    let form_data = req.form_data().await?;
-    let parts = platform_action.split("-").collect::<Vec<&str>>();
-    match parts[0] {
-        "twitch" => twitch::get_token(&ctx, form_data, true).await,
-        "restream" => restream::get_token(&ctx, form_data, true).await,
-        _ => Response::error(format!("Unknown platform: {}", parts[0]), 404),
+    let form_data = req.form_data().await;
+    if let Err(err) = form_data {
+        return Response::error(format!("Bad Request: {}", err), 400);
+    }
+
+    let platform = platform_action.split("-").next().unwrap_or_default();
+    match platform {
+        "twitch" => twitch::get_token(&ctx, form_data?, true).await,
+        "restream" => restream::get_token(&ctx, form_data?, true).await,
+        _ => Response::error(format!("Unknown platform: {}", platform), 404),
     }
 }
