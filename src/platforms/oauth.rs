@@ -43,7 +43,21 @@ pub fn get_redirect(config: OAuthConfig) -> Result<Response> {
 }
 
 pub async fn get_token(config: OAuthConfig, form_data: FormData) -> Result<Response> {
-    let grant_type: String = get_param_val(&form_data, "grant_type").unwrap_or_default();
+    let res = get_token_internal(config, form_data).await;
+    if let Err(err) = res {
+        // Assume that if we're here the request was missing a required parameter
+        let res = Response::from_json(&serde_json::json!({
+            "error": "request_error",
+            "error_description": format!("Request failed due to the following error: {}", err),
+        }))?;
+        return Ok(res.with_status(400));
+    }
+
+    res
+}
+
+async fn get_token_internal(config: OAuthConfig, form_data: FormData) -> Result<Response> {
+    let grant_type: String = get_param_val(&form_data, "grant_type")?;
 
     let mut post_data = vec![
         ("client_id", config.client_id),
@@ -53,10 +67,10 @@ pub async fn get_token(config: OAuthConfig, form_data: FormData) -> Result<Respo
 
     match grant_type.as_str() {
         "refresh_token" => {
-            post_data.push(("refresh_token", get_param_val(&form_data, "refresh_token").unwrap()));
+            post_data.push(("refresh_token", get_param_val(&form_data, "refresh_token")?));
         }
         "authorization_code" => {
-            post_data.push(("code", get_param_val(&form_data, "code").unwrap()));
+            post_data.push(("code", get_param_val(&form_data, "code")?));
             post_data.push(("redirect_uri", config.redirect_url));
         }
         _ => return Response::error(format!("Invalid grant_type '{}'", grant_type), 400),
@@ -142,13 +156,13 @@ fn generate_state_string() -> String {
     rand_string
 }
 
-fn get_param_val(form_data: &FormData, name: &str) -> Option<String> {
+fn get_param_val(form_data: &FormData, name: &str) -> Result<String> {
     // This is kinda weird, dunno if there's a better way to do this.
     if let Some(value) = form_data.get(name) {
         if let FormEntry::Field(val) = value {
-            return Some(val);
+            return Ok(val);
         }
     };
 
-    None
+    Err(format!("Missing parameter \"{}\"", name).into())
 }
