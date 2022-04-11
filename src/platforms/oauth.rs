@@ -101,10 +101,10 @@ async fn get_token_internal(config: OAuthConfig, form_data: FormData) -> Result<
     let status = resp.status_code();
     let _json = resp.json::<HashMap<String, serde_json::Value>>().await;
 
-    if _json.is_err() {
+    if let Err(e) = _json {
         let res = Response::from_json(&serde_json::json!({
             "error": "parse_error",
-            "error_description": format!("Bad JSON response from {}", config.name)
+            "error_description": format!("Bad JSON response from {}: {}", config.name, e)
         }))?;
         return Ok(res.with_status(500));
     }
