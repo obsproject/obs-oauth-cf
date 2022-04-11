@@ -26,7 +26,7 @@ fn get_redirect_url(config: OAuthConfig) -> String {
         ("state", generate_state_string()),
     ];
 
-    if config.extra_params.len() > 0 {
+    if !config.extra_params.is_empty() {
         for (key, val) in config.extra_params.iter() {
             params.push((key, val.to_string()));
         }
@@ -172,11 +172,8 @@ fn generate_state_string() -> String {
 }
 
 fn get_param_val(form_data: &FormData, name: &str) -> Result<String> {
-    // This is kinda weird, dunno if there's a better way to do this.
-    if let Some(value) = form_data.get(name) {
-        if let FormEntry::Field(val) = value {
-            return Ok(val);
-        }
+    if let Some(FormEntry::Field(val)) = form_data.get(name) {
+        return Ok(val);
     };
 
     Err(format!("Missing parameter \"{}\"", name).into())

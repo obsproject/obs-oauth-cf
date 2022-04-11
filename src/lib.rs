@@ -83,7 +83,7 @@ async fn handle_legacy_token(mut req: Request, ctx: RouteContext<()>) -> Result<
         return Response::error(format!("Bad Request: {}", err), 400);
     }
 
-    let platform = platform_action.split("-").next().unwrap_or_default();
+    let platform = platform_action.split('-').next().unwrap_or_default();
     match platform {
         "twitch" => twitch::get_token(&ctx, form_data?, true).await,
         "restream" => restream::get_token(&ctx, form_data?, true).await,
