@@ -91,14 +91,29 @@ async fn get_token_internal(config: OAuthConfig, form_data: FormData) -> Result<
 
     if let Err(e) = _resp {
         let resp = Response::from_json(&serde_json::json!({
-            "error": "curl_error",  // Legacy error code used in original PHP script
-            "error_description": format!("Request failed with {}", e)
+            "error": "internal_error",
+            "error_description": format!("Fetch failed with {}", e)
         }))?;
         return Ok(resp.with_status(500));
     }
 
     let mut resp = _resp.unwrap();
     let status = resp.status_code();
+
+    /*
+     * Cloudflare's fetch implementation does not return an error if the network fails.
+     * Instead, it returns a human-readable HTML error page with a status code of >= 520.
+     * Unfortunately, this means that we cannot easily provide a more meaningful
+     * error to the user without parsing HTML.
+     */
+    if status >= 520 {
+        let resp = Response::from_json(&serde_json::json!({
+            "error": "curl_error",  // Legacy error code used in original PHP script
+            "error_description": format!("Request failed with Cloudflare status code {}", status)
+        }))?;
+        return Ok(resp.with_status(500));
+    }
+
     let _json = resp.json::<HashMap<String, serde_json::Value>>().await;
 
     if let Err(e) = _json {
