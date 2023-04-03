@@ -1,7 +1,6 @@
 name = "obs-oauth-cf"
-type = "javascript"
-workers_dev = true
-compatibility_date = "2022-03-29"
+compatibility_date = "2022-05-15"
+main = "build/worker/shim.mjs"
 
 [vars]
 TWITCH_REDIRECT_URL = "https://auth.obsproject.com/v1/twitch/finalise"
@@ -11,15 +10,6 @@ RESTREAM_LEGACY_REDIRECT_URL = "https://obsproject.com/app-auth/restream-auth.ph
 
 [build]
 command = "cargo install -q worker-build && worker-build --release" # required
-
-[build.upload]
-dir = "build/worker"
-format = "modules"
-main = "./shim.mjs"
-
-[[build.upload.rules]]
-globs = ["**/*.wasm"]
-type = "CompiledWasm"
 
 # read more about configuring your Worker via wrangler.toml at:
 # https://developers.cloudflare.com/workers/cli-wrangler/configuration

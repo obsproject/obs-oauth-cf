@@ -24,17 +24,17 @@ jobs:
         uses: Swatinem/rust-cache@v1
 
       - name: Install wrangler
-        run: cargo install wrangler
+        run: npm install -g wrangler
 
-      - name: Build
+       - name: Build
         if: github.event_name != 'workflow_dispatch'
-        run: wrangler build
+        run: wrangler publish --dry-run
 
       - name: Publish
         if: github.event_name == 'workflow_dispatch'
         run: wrangler publish
         env:
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
 
       - name: Publish secrets
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.update_secrets == 'true'
@@ -44,4 +44,4 @@ jobs:
             echo '${{ secrets.RESTREAM_ID }}' | wrangler secret put "RESTREAM_ID"
             echo '${{ secrets.RESTREAM_SECRET }}' | wrangler secret put "RESTREAM_SECRET"
         env:
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
