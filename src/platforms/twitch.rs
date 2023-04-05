@@ -21,7 +21,7 @@ pub async fn get_token(ctx: &RouteContext<()>, form_data: FormData, legacy: bool
     }
 }
 
-pub fn get_twitch_config(ctx: &RouteContext<()>, legacy: bool) -> Result<OAuthConfig> {
+fn get_twitch_config(ctx: &RouteContext<()>, legacy: bool) -> Result<OAuthConfig> {
     let config = oauth::OAuthConfig {
         name: "Twitch".to_string(),
         client_id: ctx.secret("TWITCH_ID")?.to_string(),
