@@ -22,20 +22,19 @@ pub async fn get_token(ctx: &RouteContext<()>, form_data: FormData, legacy: bool
 }
 
 pub fn get_twitch_config(ctx: &RouteContext<()>, legacy: bool) -> Result<OAuthConfig> {
-    let mut config = oauth::OAuthConfig {
+    let config = oauth::OAuthConfig {
         name: "Twitch".to_string(),
         client_id: ctx.secret("TWITCH_ID")?.to_string(),
         client_secret: ctx.secret("TWITCH_SECRET")?.to_string(),
-        redirect_url: ctx.var("TWITCH_REDIRECT_URL")?.to_string(),
+        redirect_url: match legacy {
+            false => ctx.var("TWITCH_REDIRECT_URL")?.to_string(),
+            true => ctx.var("TWITCH_LEGACY_REDIRECT_URL")?.to_string(),
+        },
         scope: SCOPES.to_string(),
         auth_url: TWITCH_AUTH_URL.to_string(),
         token_url: TWITCH_TOKEN_URL.to_string(),
         ..Default::default()
     };
-
-    if legacy {
-        config.redirect_url = ctx.var("TWITCH_LEGACY_REDIRECT_URL")?.to_string();
-    }
 
     Ok(config)
 }
